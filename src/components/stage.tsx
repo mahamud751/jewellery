@@ -2,7 +2,7 @@
 
 import { MeshReflectorMaterial, PerformanceMonitor, Sparkles, useProgress } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Bloom, EffectComposer, Vignette } from "@react-three/postprocessing";
+import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { BengalStage } from "@/components/bengal";
@@ -10,8 +10,10 @@ import { NamesChamber } from "@/components/chamber";
 import { PresenceGallery } from "@/components/gallery";
 import { ConstantStage, NocturneVault } from "@/components/stages";
 import { Diamond, EnvProvider, Glow, LaidNecklace, Solitaire, Studio } from "@/components/jewels";
+import { usePlaster } from "@/components/plaster";
 import { RigPoint, RigSpot, Room, RoomRig } from "@/components/room-rig";
-import { SHOTS } from "@/lib/sections";
+import { washTexture } from "@/lib/plaster";
+import { SHOTS, travelSeconds } from "@/lib/sections";
 
 
 function LoadBridge({ onProgress }: { onProgress: (value: number) => void }) {
@@ -39,8 +41,9 @@ function Rig({
   const desired = useRef(new THREE.Vector3());
   const look = useRef(new THREE.Vector3());
   const lookNow = useRef(new THREE.Vector3(0, 0.38, 0));
+  const flight = useRef({ from: 0, to: 0, start: 0, duration: 0 });
 
-  useFrame(({ size, camera: lens }, delta) => {
+  useFrame(({ size, camera: lens, clock }, delta) => {
     // Portrait screens widen the lens so the stone keeps the same share of the frame.
     const aspect = size.width / size.height;
     const fov = aspect < 1 ? 30 + (1 - aspect) * 24 : 30;
@@ -49,15 +52,25 @@ function Rig({
       lens.updateProjectionMatrix();
     }
 
+    // One timed flight per chapter change, eased in and out once over the whole
+    // path, so a jump across several rooms is a single glide, not a stop at each.
     const target = sectionRef.current ?? 0;
-    const ease = reduced ? 1 : 1 - Math.pow(0.012, delta);
-    smoothRef.current += (target - smoothRef.current) * ease;
+    const now = clock.elapsedTime;
+    const trip = flight.current;
+    if (target !== trip.to) {
+      trip.from = smoothRef.current;
+      trip.to = target;
+      trip.start = now;
+      trip.duration = reduced ? 0 : travelSeconds(trip.from, target);
+    }
+    const t = trip.duration > 0 ? Math.min(1, (now - trip.start) / trip.duration) : 1;
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    smoothRef.current = THREE.MathUtils.lerp(trip.from, trip.to, eased);
 
     const max = SHOTS.length - 1;
     const clamped = THREE.MathUtils.clamp(smoothRef.current, 0, max);
     const index = Math.min(max - 1, Math.floor(clamped));
-    const span = clamped - index;
-    const shaped = span * span * (3 - 2 * span);
+    const shaped = clamped - index;
     const from = SHOTS[index];
     const to = SHOTS[index + 1];
 
@@ -115,6 +128,12 @@ function HeroDiamond({ fancy, reduced }: { fancy: boolean; reduced: boolean }) {
 const CONCRETE = { color: "#0d0b12", roughness: 0.86, metalness: 0.12 };
 
 function Atelier({ fancy }: { fancy: boolean }) {
+  // Plaster walls; the side walls glow up from their floor coves.
+  const plaster = usePlaster(7, 7);
+  // A touch lighter than bare concrete so the plaster grain reads under the key light.
+  const wall = { ...CONCRETE, ...plaster, color: "#30243f" };
+  const coveWash = useMemo(() => washTexture("bottom"), []);
+  const ceilingWash = useMemo(() => washTexture("top"), []);
   const portal = useMemo(
     () => ({
       uTop: { value: new THREE.Color("#05040a") },
@@ -151,12 +170,12 @@ function Atelier({ fancy }: { fancy: boolean }) {
       {[-1, 1].map((side) => (
         <mesh key={side} position={[side * 3.3, 2.5, -4.5]}>
           <boxGeometry args={[4.6, 7, 0.5]} />
-          <meshStandardMaterial {...CONCRETE} />
+          <meshStandardMaterial {...wall} emissive="#7954cd" emissiveMap={ceilingWash} emissiveIntensity={0.7} />
         </mesh>
       ))}
       <mesh position={[0, 5.1, -4.5]}>
         <boxGeometry args={[2, 1.8, 0.5]} />
-        <meshStandardMaterial {...CONCRETE} />
+        <meshStandardMaterial {...wall} emissive="#7954cd" emissiveMap={ceilingWash} emissiveIntensity={0.7} />
       </mesh>
       <mesh position={[0, 1.6, -6.4]}>
         <planeGeometry args={[4, 6]} />
@@ -178,7 +197,7 @@ function Atelier({ fancy }: { fancy: boolean }) {
       {[-1, 1].map((side) => (
         <mesh key={`r${side}`} position={[side * 1, 1.6, -5.45]} rotation={[0, Math.PI / 2, 0]}>
           <planeGeometry args={[1.9, 6]} />
-          <meshStandardMaterial {...CONCRETE} side={THREE.DoubleSide} />
+          <meshStandardMaterial {...wall} side={THREE.DoubleSide} />
         </mesh>
       ))}
       <mesh position={[0, -1.015, -5.4]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -191,7 +210,7 @@ function Atelier({ fancy }: { fancy: boolean }) {
         <group key={`w${side}`} position={[side * 4.6, 0, -1.5]}>
           <mesh position={[0, 2.5, 0]}>
             <boxGeometry args={[0.4, 7, 7]} />
-            <meshStandardMaterial {...CONCRETE} />
+            <meshStandardMaterial {...wall} emissive="#7954df" emissiveMap={coveWash} emissiveIntensity={0.95} />
           </mesh>
           <mesh position={[-side * 0.21, -0.94, 0]}>
             <boxGeometry args={[0.02, 0.03, 7]} />
@@ -203,11 +222,12 @@ function Atelier({ fancy }: { fancy: boolean }) {
       {/* stone plinth with a halo cove */}
       <mesh position={[0, -0.87, 0]} receiveShadow castShadow>
         <cylinderGeometry args={[1.62, 1.62, 0.3, 96]} />
-        <meshPhysicalMaterial color="#141119" roughness={0.3} metalness={0.2} clearcoat={0.6} clearcoatRoughness={0.25} />
+        {/* Low env response: a polished dark stone, not a grey mirror of the ceiling light. */}
+        <meshPhysicalMaterial color="#0f0d14" roughness={0.35} metalness={0.1} clearcoat={0.5} clearcoatRoughness={0.3} envMapIntensity={0.25} />
       </mesh>
       <mesh position={[0, -0.715, 0]}>
         <cylinderGeometry args={[1.64, 1.64, 0.012, 96]} />
-        <meshStandardMaterial {...{ color: "#d8d6e2", metalness: 1, roughness: 0.2 }} />
+        <meshPhysicalMaterial color="#20162f" metalness={0.25} roughness={0.38} clearcoat={0.35} envMapIntensity={0.3} />
       </mesh>
       <mesh position={[0, -1.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.5, 1.66, 96]} />
@@ -282,9 +302,8 @@ function Scene({
           </Room>
         </RoomRig>
       </EnvProvider>
-      <EffectComposer enableNormalPass={false} multisampling={0}>
-        <Bloom luminanceThreshold={0.82} luminanceSmoothing={0.2} mipmapBlur intensity={fancy ? 0.8 : 0.4} />
-        <Vignette offset={0.3} darkness={0.55} />
+      <EffectComposer enableNormalPass={false} multisampling={fancy ? 4 : 2}>
+        <Bloom luminanceThreshold={1.2} luminanceSmoothing={0.15} mipmapBlur intensity={fancy ? 0.16 : 0.1} />
       </EffectComposer>
     </>
   );
@@ -305,16 +324,16 @@ export default function Stage({
   paused: boolean;
   onProgress: (value: number) => void;
 }) {
-  // Drop to 1x pixels when the GPU can't hold the frame rate, climb back when it can.
+  // Render at full retina sharpness; step down a little when the GPU can't hold the frame rate.
   const [lowRes, setLowRes] = useState(false);
 
   return (
     <Canvas
       className="webgl"
       shadows
-      dpr={lowRes ? 1 : fancy ? [1, 1.6] : [1, 1.25]}
+      dpr={lowRes ? [1, 1.4] : [1, 2]}
       frameloop={paused ? "never" : "always"}
-      // The effect composer renders into its own targets, so default-framebuffer MSAA is wasted work.
+      // The effect composer renders into its own targets and antialiases there (multisampling).
       gl={{ antialias: false, alpha: false, powerPreference: "high-performance" }}
       camera={{ position: [0, 0.42, 7.35], fov: 30, near: 0.1, far: 50 }}
       onCreated={({ gl }) => {

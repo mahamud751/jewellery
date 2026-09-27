@@ -27,6 +27,8 @@ export const TINTS = {
   violet: { color: "#e2c9ff", deep: "#6a1db8" },
   ice: { color: "#d4e6ff", deep: "#2c56b8" },
   champagne: { color: "#fff0dc", deep: "#b88a4a" },
+  /** Saturated blue-violet, for the stone that closes the experience. */
+  amethyst: { color: "#9a86ff", deep: "#4b2fd6" },
 } satisfies Record<string, Tint>;
 
 export function Diamond({
@@ -46,7 +48,7 @@ export function Diamond({
           bounces={fancy ? bounces : Math.min(bounces, 2)}
           ior={2.4}
           fresnel={0.9}
-          aberrationStrength={0.012}
+          aberrationStrength={0.02}
           fastChroma
           color={tint.color}
           toneMapped={false}
@@ -95,7 +97,7 @@ export function Glow({ color = "#b58cff", size = 1.6, opacity = 0.5, ...props }:
   );
 }
 
-const PLATINUM = { color: "#eceef4", metalness: 1, roughness: 0.13, envMapIntensity: 1.6 };
+const PLATINUM = { color: "#eceef4", metalness: 1, roughness: 0.12, envMapIntensity: 1.4 };
 
 /** Solitaire: tapered knife-edge band, four-prong head, brilliant set table-up. */
 export function Solitaire({ fancy, ...props }: { fancy: boolean } & ThreeElements["group"]) {
@@ -276,31 +278,60 @@ export function Bust({ fancy, ...props }: { fancy: boolean } & ThreeElements["gr
 
 /** Offline studio: softboxes and strips baked into a cube map the stones refract. */
 export function Studio({ neutral = false }: { neutral?: boolean }) {
-  // The experience keeps violet in its reflections; product views use a clean white studio so golds read true.
-  const violet = neutral ? "#f4efe8" : "#b48cff";
-  const portal = neutral ? "#ffffff" : "#8a55ff";
+  if (neutral) {
+    // Product views use a clean white studio so golds read true.
+    return (
+      <Environment resolution={256} frames={1} environmentIntensity={1}>
+        <color attach="background" args={["#0b0a0e"]} />
+        <Lightformer form="rect" intensity={8} position={[0, 5, 0]} rotation-x={Math.PI / 2} scale={[7, 4, 1]} />
+        {[0, 1, 2, 3, 4, 5].map((i) => {
+          const a = (i / 6) * Math.PI * 2;
+          return (
+            <Lightformer
+              key={i}
+              form="rect"
+              intensity={i % 2 ? 2.5 : 4.5}
+              position={[Math.sin(a) * 6, 1.2, Math.cos(a) * 6]}
+              rotation-y={a + Math.PI}
+              scale={[0.8, 5, 1]}
+              color={i % 3 === 1 ? "#f4efe8" : "#ffffff"}
+            />
+          );
+        })}
+        <Lightformer form="rect" intensity={2} position={[0, 1, -6]} scale={[2, 6, 1]} />
+        <Lightformer form="ring" intensity={6} position={[2, 3, 5]} scale={1.2} />
+        <Lightformer form="rect" intensity={3} position={[0, 0.5, 6]} scale={[6, 1.5, 1]} />
+        <Lightformer form="rect" intensity={1.5} position={[0, -4, 0]} rotation-x={-Math.PI / 2} scale={[6, 6, 1]} color="#2a2630" />
+      </Environment>
+    );
+  }
+
+  // The experience: a black studio with a few narrow, very bright strips. Each facet sees
+  // either black or blazing white, never a mid-grey panel, which is what makes a stone
+  // look brilliant rather than faded.
   return (
-    <Environment resolution={256} frames={1} environmentIntensity={1}>
-      <color attach="background" args={[neutral ? "#0b0a0e" : "#050407"]} />
-      <Lightformer form="rect" intensity={8} position={[0, 5, 0]} rotation-x={Math.PI / 2} scale={[7, 4, 1]} />
-      {[0, 1, 2, 3, 4, 5].map((i) => {
-        const a = (i / 6) * Math.PI * 2;
+    <Environment resolution={512} frames={1} environmentIntensity={1}>
+      <color attach="background" args={["#000000"]} />
+      {/* narrow ceiling bar and a key strip over the right shoulder */}
+      <Lightformer form="rect" intensity={12} position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[5, 1.2, 1]} />
+      <Lightformer form="rect" intensity={10} position={[4, 3, 4]} rotation-y={-Math.PI / 4} scale={[0.9, 5, 1]} />
+      {/* ring of thin strips with black between them, one violet for colour */}
+      {Array.from({ length: 10 }, (_, i) => {
+        const a = (i / 10) * Math.PI * 2;
         return (
           <Lightformer
             key={i}
             form="rect"
-            intensity={i % 2 ? 2.5 : 4.5}
-            position={[Math.sin(a) * 6, 1.2, Math.cos(a) * 6]}
+            intensity={i % 2 ? 6 : 11}
+            position={[Math.sin(a) * 7, 1.5, Math.cos(a) * 7]}
             rotation-y={a + Math.PI}
-            scale={[0.8, 5, 1]}
-            color={i % 3 === 1 ? violet : "#ffffff"}
+            scale={[i % 2 ? 0.3 : 0.7, 7, 1]}
+            color={i === 3 ? "#b89cff" : "#ffffff"}
           />
         );
       })}
-      <Lightformer form="rect" intensity={neutral ? 2 : 5} position={[0, 1, -6]} scale={[2, 6, 1]} color={portal} />
-      <Lightformer form="ring" intensity={6} position={[2, 3, 5]} scale={1.2} />
-      {neutral ? <Lightformer form="rect" intensity={3} position={[0, 0.5, 6]} scale={[6, 1.5, 1]} /> : null}
-      <Lightformer form="rect" intensity={1.5} position={[0, -4, 0]} rotation-x={-Math.PI / 2} scale={[6, 6, 1]} color={neutral ? "#2a2630" : "#3a2466"} />
+      <Lightformer form="ring" intensity={14} position={[-2.5, 3.5, 5]} scale={0.8} />
+      <Lightformer form="rect" intensity={0.5} position={[0, -4, 0]} rotation-x={-Math.PI / 2} scale={[6, 6, 1]} color="#2a1d4a" />
     </Environment>
   );
 }

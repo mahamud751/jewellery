@@ -8,7 +8,7 @@ import { Cursor } from "@/components/cursor";
 import { PantherMark } from "@/components/panther";
 import { Menu } from "@/components/site/menu";
 import { HeroTitle, SplitText } from "@/components/split-text";
-import { CHAPTERS, SECTION_COUNT } from "@/lib/sections";
+import { CHAPTERS, SECTION_COUNT, travelSeconds } from "@/lib/sections";
 import { sound } from "@/lib/sound";
 
 const Stage = dynamic(() => import("@/components/stage"), { ssr: false });
@@ -20,6 +20,8 @@ const CHAPTER_NAMES = ["Overture", "Stillness", "Instinct", "Presence", "Constan
 export function Experience() {
   const [phase, setPhase] = useState<Phase>("boot");
   const [section, setSection] = useState(0);
+  /** The chapter whose copy is on screen: -1 while the camera is still flying. */
+  const [shown, setShown] = useState(0);
   const [about, setAbout] = useState(false);
   const [menu, setMenu] = useState(false);
   const [audioOn, setAudioOn] = useState(false);
@@ -34,6 +36,7 @@ export function Experience() {
   const aboutRef = useRef(false);
   const enteredRef = useRef(false);
   const lockRef = useRef(false);
+  const arriveRef = useRef(0);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,12 +53,17 @@ export function Experience() {
     if (!enteredRef.current || aboutRef.current || lockRef.current) return;
     const clamped = Math.min(SECTION_COUNT - 1, Math.max(0, next));
     if (clamped === sectionRef.current) return;
+    // The copy leaves at once, the camera flies, and the new copy lands as it settles.
+    const flight = reduced ? 0 : travelSeconds(sectionRef.current, clamped) * 1000;
     sectionRef.current = clamped;
     setSection(clamped);
+    setShown(-1);
     lockRef.current = true;
+    window.clearTimeout(arriveRef.current);
+    arriveRef.current = window.setTimeout(() => setShown(clamped), flight * 0.7);
     window.setTimeout(() => {
       lockRef.current = false;
-    }, reduced ? 0 : 720);
+    }, flight);
   }, [reduced]);
 
   useEffect(() => {
@@ -101,11 +109,31 @@ export function Experience() {
     const root = rootRef.current;
     if (!root) return;
 
+    // Small deltas are gathered until they add up to a real push. After a flight
+    // a trackpad keeps firing a fading tail of small events; those are ignored
+    // until the gesture pauses or pushes harder again. Mouse notches are large
+    // and always count once the camera has landed.
+    let lastWheel = 0;
+    let lastAbs = 0;
+    let gathered = 0;
+    let spent = false;
     const onWheel = (event: WheelEvent) => {
       if (!enteredRef.current || aboutRef.current) return;
       event.preventDefault();
-      if (Math.abs(event.deltaY) < 8) return;
-      go(sectionRef.current + Math.sign(event.deltaY));
+      const now = performance.now();
+      const abs = Math.abs(event.deltaY);
+      if (now - lastWheel > 180 || (spent && abs > lastAbs * 1.6 && abs > 12)) {
+        spent = false;
+        gathered = 0;
+      }
+      lastWheel = now;
+      lastAbs = abs;
+      if (lockRef.current || (spent && abs < 50)) return;
+      gathered += event.deltaY;
+      if (Math.abs(gathered) < 24) return;
+      go(sectionRef.current + Math.sign(gathered));
+      gathered = 0;
+      spent = true;
     };
 
     let startY = 0;
@@ -214,14 +242,7 @@ export function Experience() {
         )}
       </div>
 
-      <div className="vignette" aria-hidden="true">
-        <span className="vig vig-tl" />
-        <span className="vig vig-tr" />
-        <span className="vig vig-bl" />
-        <span className="vig vig-br" />
-      </div>
-      <div className="grain" aria-hidden="true" />
-
+      <div className="vignette" aria-hidden="true" />
       <div className={`hud ${phase === "in" ? "is-on" : ""}`}>
         <header className="hero-header">
           <div className="header-left">
@@ -261,11 +282,11 @@ export function Experience() {
         </header>
 
         <main className="hero-main">
-          <HeroTitle active={phase === "in" && section === 0 && !overlay} />
+          <HeroTitle active={phase === "in" && shown === 0 && !overlay} />
         </main>
 
         {CHAPTERS.map((item, index) => {
-          const active = phase === "in" && section === index + 1 && !overlay;
+          const active = phase === "in" && shown === index + 1 && !overlay;
           return (
             <section key={item.id} className={`section-content place-${item.place} ${active ? "active" : ""}`}>
               <div className="content-wrap">
@@ -328,14 +349,14 @@ export function Experience() {
 
         <footer className={`hero-footer ${section === 0 ? "is-hero" : ""}`}>
           <div className="footer-left">
-            <p className={`hero-desc ${phase === "in" && section === 0 ? "is-on" : ""}`}>
+            <p className={`hero-desc ${phase === "in" && shown === 0 ? "is-on" : ""}`}>
               Grair <span className="secondary">is formed in</span> restraint.
               <br />
               <span className="secondary">Crafted for those who do not need to</span> announce their presence.
             </p>
             <button
               type="button"
-              className={`cta-btn ${phase === "in" && section === 0 ? "is-on" : ""}`}
+              className={`cta-btn ${phase === "in" && shown === 0 ? "is-on" : ""}`}
               onClick={() => {
                 void sound.blip(0.7);
                 go(1);

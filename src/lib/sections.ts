@@ -118,7 +118,7 @@ const bengalShot = roomShot(BENGAL_ORIGIN, BENGAL_YAW, 6.6, 1.65, 1.22, 1.35);
  */
 export const SHOTS: Shot[] = [
   { position: [0, 0.42, 7.35], target: [0, 0.38, 0] },
-  { position: [0.12, 0.28, 4.25], target: [0, 0.32, 0] },
+  { position: [0.12, 0.34, 5.1], target: [0, 0.3, 0] },
   { position: [2.72, 0.22, 2.85], target: [1.05, -0.18, 0.15] },
   { position: [16.57, 1.58, -10.95], target: [13.69, 1.08, -8.48] },
   constantShot,
@@ -126,3 +126,19 @@ export const SHOTS: Shot[] = [
   bengalShot,
   { position: [11.56, 2.06, 13.15], target: [7.46, 1.48, 14.64] },
 ];
+
+/**
+ * Seconds the camera takes to fly from one chapter to another: slow and even,
+ * longer for the flights between rooms. The scroll stays locked for all of it.
+ */
+export function travelSeconds(from: number, to: number) {
+  const a = Math.round(Math.min(from, to));
+  const b = Math.round(Math.max(from, to));
+  let distance = 0;
+  for (let i = a; i < b; i++) {
+    const p = SHOTS[i].position;
+    const q = SHOTS[i + 1].position;
+    distance += Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
+  }
+  return Math.min(4.2, 1.9 + distance * 0.11);
+}

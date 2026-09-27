@@ -1,7 +1,9 @@
 :root {
-  --ink: #f4f1ec;
-  --muted: #6e6a72;
-  --secondary: #969696;
+  /* Cool pearl and lavender, drawn from the violet rooms, so copy sits in the scene. */
+  --ink: #f2eefb;
+  --muted: #a49bbd;
+  --secondary: #b3abc9;
+  --accent: #c9b8f5;
   --line: rgba(255, 255, 255, 0.2);
   --ease: cubic-bezier(0.19, 1, 0.22, 1);
   color-scheme: dark;
@@ -106,24 +108,19 @@ a:focus-visible {
   inset: 0;
   z-index: 5;
   pointer-events: none;
+  background: radial-gradient(
+    ellipse 82% 74% at 50% 44%,
+    transparent 48%,
+    rgba(0, 0, 0, 0.08) 68%,
+    rgba(0, 0, 0, 0.52) 100%
+  );
+  transition: background 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.vig {
-  position: absolute;
-  inset: 0;
-  opacity: 0.85;
-  transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* Keep the opening copy grounded without laying four dark gradients over the scene. */
+.s-0 .vignette {
+  background: linear-gradient(180deg, transparent 48%, rgba(0, 0, 0, 0.62) 100%);
 }
-
-.vig-tl { background: radial-gradient(circle at 0 0, #000000f2 0%, #0006 30%, transparent 75%); }
-.vig-tr { background: radial-gradient(circle at 100% 0, #000000f2 0%, #0006 30%, transparent 75%); }
-.vig-bl { background: radial-gradient(circle at 0 100%, #000000e6 0%, #0006 30%, transparent 75%); }
-.vig-br { background: radial-gradient(circle at 100% 100%, #000000e6 0%, #0006 30%, transparent 75%); }
-
-.s-0 .vig-tl,
-.s-0 .vig-tr { opacity: 0; }
-.s-0 .vig-bl,
-.s-0 .vig-br { opacity: 0.95; }
 
 .grain {
   position: fixed;
@@ -140,7 +137,7 @@ a:focus-visible {
   font-weight: 500;
   letter-spacing: 0.42em;
   line-height: 1;
-  background: linear-gradient(100deg, #fff 0%, #c8d1e8 22%, #fff 46%, #ebeaf4 68%, #fff 100%);
+  background: linear-gradient(100deg, #fff 0%, #d3c8f2 22%, #fff 46%, #ebeaf4 68%, #fff 100%);
   background-size: 220% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -273,7 +270,7 @@ a:focus-visible {
 }
 
 .about-btn {
-  color: #f0f0f0;
+  color: var(--ink);
   text-transform: uppercase;
   letter-spacing: -0.02rem;
   font-size: 0.8rem;
@@ -401,6 +398,8 @@ a:focus-visible {
   width: 26rem;
   max-width: 100%;
   color: var(--muted);
+  /* keeps small copy readable where it crosses a lit wall */
+  text-shadow: 0 1px 18px rgba(8, 5, 18, 0.7);
   font-size: 0.85rem;
   line-height: 1.6;
   letter-spacing: 0.01rem;
@@ -416,7 +415,8 @@ a:focus-visible {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(150, 118, 255, 0.09);
+  border: 1px solid rgba(201, 184, 245, 0.14);
   border-radius: 2px;
   backdrop-filter: blur(10px);
 }
@@ -436,38 +436,47 @@ a:focus-visible {
   white-space: nowrap;
 }
 
+/* GRAIR's letter reveal: each letter blurs up into focus, in scattered order. */
 .split .ch {
   display: inline-block;
   opacity: 0;
   filter: blur(12px);
-  transform: translateY(15px);
+  transform: translateY(15px) scale(0.98);
   will-change: filter, opacity, transform;
 }
 
 .split.is-on .ch {
-  animation: rise 0.9s var(--ease) forwards;
-  animation-delay: calc(var(--i) * 16ms);
+  animation: rise 1.8s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+  animation-delay: calc(var(--r) * var(--span));
 }
 
-.section-title.is-on .ch {
-  background: linear-gradient(#fff 30%, #999 100%);
+.split.is-out .ch {
+  animation: settle-out 0.7s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  animation-delay: calc(var(--r) * 120ms);
+}
+
+.section-title .ch {
+  background: linear-gradient(#fbf9ff 30%, #b1a5d6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-title .ch {
+  background-image: linear-gradient(90deg, #fff 0%, #d3c8f2 20%, #fff 40%, #ebeaf4 60%, #fff 80%, #d3c8f2 100%);
+  background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .hero-title.is-on .ch {
-  background-image: linear-gradient(90deg, #fff 0%, #c8d1e8 20%, #fff 40%, #ebeaf4 60%, #fff 80%, #c8d1e8 100%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
   animation-name: rise, platinum;
-  animation-duration: 1s, 12s;
-  animation-timing-function: var(--ease), linear;
+  animation-duration: 1.8s, 12s;
+  animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1), linear;
   animation-fill-mode: forwards, none;
   animation-iteration-count: 1, infinite;
-  animation-delay: calc(var(--i) * 18ms), 0s;
+  animation-delay: calc(var(--r) * var(--span)), 0s;
 }
 
 .hero-scroll {
@@ -509,7 +518,7 @@ a:focus-visible {
   width: 0.62rem;
   height: 0.62rem;
   margin: -0.31rem 0 0 -0.31rem;
-  background: linear-gradient(135deg, #fff, #c8d1e8 45%, #fff 78%);
+  background: linear-gradient(135deg, #fff, #d3c8f2 45%, #fff 78%);
   transform: rotate(45deg);
   box-shadow: 0 0 16px rgba(255, 255, 255, 0.45);
 }
@@ -532,7 +541,7 @@ a:focus-visible {
 }
 
 .hero-desc {
-  color: #f0f0f0;
+  color: var(--ink);
   font-size: 1rem;
   line-height: 1.2;
   letter-spacing: -0.02rem;
@@ -684,7 +693,7 @@ a:focus-visible {
 }
 
 .about-text {
-  color: #8b8b8b;
+  color: var(--muted);
   text-align: center;
   text-transform: uppercase;
   font-size: 0.75rem;
@@ -719,7 +728,7 @@ a:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.9rem;
-  color: #b9a8dc;
+  color: var(--accent);
   font-size: 0.62rem;
   font-weight: 500;
   letter-spacing: 0.32em;
@@ -729,7 +738,7 @@ a:focus-visible {
 .eyebrow-rule {
   width: 2.6rem;
   height: 1px;
-  background: linear-gradient(90deg, #b9a8dc, transparent);
+  background: linear-gradient(90deg, var(--accent), transparent);
   transform-origin: left;
   transform: scaleX(0);
   transition: transform 1.2s var(--ease) 0.2s;
@@ -1011,7 +1020,12 @@ html.has-cursor * { cursor: none !important; }
 }
 
 @keyframes rise {
-  to { opacity: 1; filter: blur(0); transform: translateY(0); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+
+@keyframes settle-out {
+  from { opacity: 1; filter: blur(0); transform: none; }
+  to { opacity: 0; filter: blur(12px); transform: translateY(15px) scale(0.98); }
 }
 
 @keyframes platinum {
@@ -1101,7 +1115,7 @@ html.has-cursor * { cursor: none !important; }
 
   .content-wrap { width: 100%; gap: 0.75rem; }
   .section-title { font-size: 2.7rem; }
-  .section-desc { width: 100%; font-size: 0.9rem; color: #8b8b8b; }
+  .section-desc { width: 100%; font-size: 0.9rem; color: var(--muted); }
   .place-s3 .section-title { width: auto; }
 
   .panther { width: 11rem; }
