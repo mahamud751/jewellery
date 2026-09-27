@@ -1,15 +1,18 @@
 "use client";
 
-import { MeshReflectorMaterial, Sparkles, useProgress } from "@react-three/drei";
+import { MeshReflectorMaterial, PerformanceMonitor, Sparkles, useProgress } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer, Vignette } from "@react-three/postprocessing";
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
+import { BengalStage } from "@/components/bengal";
 import { NamesChamber } from "@/components/chamber";
 import { PresenceGallery } from "@/components/gallery";
 import { ConstantStage, NocturneVault } from "@/components/stages";
 import { Diamond, EnvProvider, Glow, LaidNecklace, Solitaire, Studio } from "@/components/jewels";
+import { RigPoint, RigSpot, Room, RoomRig } from "@/components/room-rig";
 import { SHOTS } from "@/lib/sections";
+
 
 function LoadBridge({ onProgress }: { onProgress: (value: number) => void }) {
   const { progress } = useProgress();
@@ -21,16 +24,18 @@ function LoadBridge({ onProgress }: { onProgress: (value: number) => void }) {
 
 function Rig({
   sectionRef,
+  smoothRef,
   aboutRef,
   reduced,
 }: {
   sectionRef: RefObject<number>;
+  /** Written every frame: where the camera actually is along the chapters. */
+  smoothRef: RefObject<number>;
   aboutRef: RefObject<boolean>;
   reduced: boolean;
 }) {
   const camera = useThree((state) => state.camera);
   const pointer = useThree((state) => state.pointer);
-  const smooth = useRef(0);
   const desired = useRef(new THREE.Vector3());
   const look = useRef(new THREE.Vector3());
   const lookNow = useRef(new THREE.Vector3(0, 0.38, 0));
@@ -46,10 +51,10 @@ function Rig({
 
     const target = sectionRef.current ?? 0;
     const ease = reduced ? 1 : 1 - Math.pow(0.012, delta);
-    smooth.current += (target - smooth.current) * ease;
+    smoothRef.current += (target - smoothRef.current) * ease;
 
     const max = SHOTS.length - 1;
-    const clamped = THREE.MathUtils.clamp(smooth.current, 0, max);
+    const clamped = THREE.MathUtils.clamp(smoothRef.current, 0, max);
     const index = Math.min(max - 1, Math.floor(clamped));
     const span = clamped - index;
     const shaped = span * span * (3 - 2 * span);
@@ -125,7 +130,7 @@ function Atelier({ fancy }: { fancy: boolean }) {
         <planeGeometry args={[12, 16]} />
         {fancy ? (
           <MeshReflectorMaterial
-            resolution={512}
+            resolution={256}
             blur={[320, 90]}
             mixBlur={1}
             mixStrength={1.4}
@@ -218,11 +223,10 @@ function Atelier({ fancy }: { fancy: boolean }) {
 function Lights() {
   return (
     <>
-      <ambientLight intensity={0.12} />
-      <spotLight position={[2.6, 5.6, 3.2]} angle={0.38} penumbra={0.9} intensity={60} color="#f6f2ff" castShadow />
-      <spotLight position={[0, 1.8, -5.6]} angle={0.9} penumbra={1} intensity={30} color="#8a55ff" />
-      <pointLight position={[-2.6, 0.6, 1.6]} intensity={5} color="#4d6bff" distance={7} />
-      <pointLight position={[0, 1.8, 2.2]} intensity={4} color="#efe4ff" distance={6} />
+      <RigSpot room="atelier" position={[2.6, 5.6, 3.2]} angle={0.38} penumbra={0.9} intensity={60} color="#f6f2ff" castShadow />
+      <RigSpot room="atelier" position={[0, 1.8, -5.6]} angle={0.9} penumbra={1} intensity={30} color="#8a55ff" />
+      <RigPoint room="atelier" position={[-2.6, 0.6, 1.6]} intensity={5} color="#4d6bff" distance={7} />
+      <RigPoint room="atelier" position={[0, 1.8, 2.2]} intensity={4} color="#efe4ff" distance={6} />
     </>
   );
 }
@@ -240,25 +244,44 @@ function Scene({
   reduced: boolean;
   onProgress: (value: number) => void;
 }) {
+  const smoothRef = useRef(0);
+
   return (
     <>
       <color attach="background" args={["#050407"]} />
       <fog attach="fog" args={["#050407", 11, 30]} />
       <LoadBridge onProgress={onProgress} />
-      <Rig sectionRef={sectionRef} aboutRef={aboutRef} reduced={reduced} />
+      <Rig sectionRef={sectionRef} smoothRef={smoothRef} aboutRef={aboutRef} reduced={reduced} />
       <Studio />
-      <Lights />
+      {/* Real lights live outside the rooms: hiding one would change the light count and recompile every shader. */}
+      <ambientLight intensity={0.12} />
       <EnvProvider>
-        <Atelier fancy={fancy} />
-        <HeroDiamond fancy={fancy} reduced={reduced} />
-        <Solitaire fancy={fancy} position={[1.18, -0.3, 0.3]} rotation={[0, -0.55, 0]} />
-        <LaidNecklace fancy={fancy} position={[-1.05, -0.705, 0.35]} rotation={[0, 0.5, 0]} scale={0.9} />
-        <PresenceGallery fancy={fancy} sectionRef={sectionRef} />
-        <ConstantStage sectionRef={sectionRef} reduced={reduced} />
-        <NocturneVault reduced={reduced} />
-        <NamesChamber fancy={fancy} reduced={reduced} sectionRef={sectionRef} />
+        <RoomRig sectionRef={smoothRef}>
+          <Room id="atelier">
+            <Lights />
+            <Atelier fancy={fancy} />
+            <HeroDiamond fancy={fancy} reduced={reduced} />
+            <Solitaire fancy={fancy} position={[1.18, -0.3, 0.3]} rotation={[0, -0.55, 0]} />
+            <LaidNecklace fancy={fancy} position={[-1.05, -0.705, 0.35]} rotation={[0, 0.5, 0]} scale={0.9} />
+            <Sparkles count={fancy ? 40 : 16} scale={[7, 4, 7]} size={1.8} speed={reduced ? 0 : 0.22} color="#edd7fe" opacity={0.5} position={[0, 0.6, 0]} />
+          </Room>
+          <Room id="gallery">
+            <PresenceGallery fancy={fancy} sectionRef={sectionRef} />
+          </Room>
+          <Room id="constant">
+            <ConstantStage sectionRef={sectionRef} reduced={reduced} />
+          </Room>
+          <Room id="nocturne">
+            <NocturneVault reduced={reduced} />
+          </Room>
+          <Room id="bengal">
+            <BengalStage sectionRef={sectionRef} reduced={reduced} />
+          </Room>
+          <Room id="chamber">
+            <NamesChamber fancy={fancy} reduced={reduced} sectionRef={sectionRef} />
+          </Room>
+        </RoomRig>
       </EnvProvider>
-      <Sparkles count={fancy ? 40 : 16} scale={[7, 4, 7]} size={1.8} speed={reduced ? 0 : 0.22} color="#edd7fe" opacity={0.5} position={[0, 0.6, 0]} />
       <EffectComposer enableNormalPass={false} multisampling={0}>
         <Bloom luminanceThreshold={0.82} luminanceSmoothing={0.2} mipmapBlur intensity={fancy ? 0.8 : 0.4} />
         <Vignette offset={0.3} darkness={0.55} />
@@ -282,13 +305,17 @@ export default function Stage({
   paused: boolean;
   onProgress: (value: number) => void;
 }) {
+  // Drop to 1x pixels when the GPU can't hold the frame rate, climb back when it can.
+  const [lowRes, setLowRes] = useState(false);
+
   return (
     <Canvas
       className="webgl"
       shadows
-      dpr={fancy ? [1, 1.6] : [1, 1.25]}
+      dpr={lowRes ? 1 : fancy ? [1, 1.6] : [1, 1.25]}
       frameloop={paused ? "never" : "always"}
-      gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+      // The effect composer renders into its own targets, so default-framebuffer MSAA is wasted work.
+      gl={{ antialias: false, alpha: false, powerPreference: "high-performance" }}
       camera={{ position: [0, 0.42, 7.35], fov: 30, near: 0.1, far: 50 }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -296,6 +323,7 @@ export default function Stage({
         gl.setClearColor("#050407");
       }}
     >
+      <PerformanceMonitor onDecline={() => setLowRes(true)} onIncline={() => setLowRes(false)} flipflops={3} onFallback={() => setLowRes(true)} />
       <Scene
         sectionRef={sectionRef}
         aboutRef={aboutRef}

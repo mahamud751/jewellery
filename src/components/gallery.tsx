@@ -6,7 +6,9 @@ import { useRef } from "react";
 import type { RefObject } from "react";
 import * as THREE from "three";
 import { Bust, Diamond, Glow, TINTS } from "@/components/jewels";
+import { RigPoint, RigSpot, type LightProxy } from "@/components/room-rig";
 import { GALLERY_ORIGIN } from "@/lib/sections";
+
 
 const FACE_YAW = Math.atan2(0.657, -0.754);
 
@@ -36,19 +38,19 @@ function Vitrine({ fancy, height, tint, index }: { fancy: boolean; height: numbe
       </mesh>
       <mesh position={[0, height + 0.26, 0]}>
         <boxGeometry args={[0.44, 0.52, 0.44]} />
-        <meshPhysicalMaterial color="#ffffff" roughness={0.02} transmission={1} thickness={0.02} ior={1.5} transparent opacity={0.28} depthWrite={false} />
+        {/* Thin glass needs no refraction: a transmission material would re-render the whole scene every frame. */}
+        <meshPhysicalMaterial color="#ffffff" roughness={0.02} metalness={0} ior={1.5} transparent opacity={0.16} envMapIntensity={1.4} depthWrite={false} />
       </mesh>
       <group ref={stone} position={[0, height + 0.24, 0]} rotation={[0.35, 0, 0]}>
         <Diamond fancy={fancy} bounces={2} scale={0.12} tint={tint} />
       </group>
       <Glow position={[0, height + 0.012, 0]} size={0.5} opacity={0.6} color={tint.deep} />
-      <pointLight position={[0, height + 0.5, 0.05]} intensity={1.4} distance={1.2} color="#f2eaff" />
     </group>
   );
 }
 
 export function PresenceGallery({ fancy, sectionRef }: { fancy: boolean; sectionRef: RefObject<number> }) {
-  const key = useRef<THREE.SpotLight>(null);
+  const key = useRef<LightProxy>(null);
 
   useFrame(() => {
     const near = 1 - Math.min(1, Math.abs((sectionRef.current ?? 0) - 3) / 1.35);
@@ -98,11 +100,9 @@ export function PresenceGallery({ fancy, sectionRef }: { fancy: boolean; section
         </group>
       ))}
 
-      <spotLight ref={key} position={[2.4, 3.4, -2.2]} angle={0.4} penumbra={0.9} intensity={36} distance={10} color="#fff6ee" castShadow>
-        <object3D attach="target" position={[0, 1.2, 0]} />
-      </spotLight>
-      <pointLight position={[-2.2, 1.8, 1.4]} intensity={6} distance={6} color="#7a45ff" />
-      <pointLight position={[0.6, 1.2, -0.6]} intensity={1.6} distance={2.5} color="#e8dcff" />
+      <RigSpot ref={key} room="gallery" position={[2.4, 3.4, -2.2]} target={[0, 1.2, 0]} angle={0.4} penumbra={0.9} intensity={36} distance={10} color="#fff6ee" castShadow />
+      <RigPoint room="gallery" position={[-2.2, 1.8, 1.4]} intensity={6} distance={6} color="#7a45ff" />
+      <RigPoint room="gallery" position={[0.6, 1.2, -0.6]} intensity={1.6} distance={2.5} color="#e8dcff" />
     </group>
   );
 }

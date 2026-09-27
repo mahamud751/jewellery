@@ -12,7 +12,7 @@
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "@react-three/postprocessing": "^3.1.2",
-    "next": "16.3.3",
+    "next": "16.3.6",
     "postprocessing": "^6.38.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -25,7 +25,7 @@
     "@types/react-dom": "^19",
     "@types/three": "^0.182.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.3",
+    "eslint-config-next": "16.3.6",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

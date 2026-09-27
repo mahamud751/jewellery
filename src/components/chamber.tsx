@@ -6,6 +6,7 @@ import { useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import * as THREE from "three";
 import { Diamond, Glow, TINTS } from "@/components/jewels";
+import { RigPoint, RigSpot, type LightProxy } from "@/components/room-rig";
 import { CHAMBER_ORIGIN } from "@/lib/sections";
 
 const WALL = { color: "#08070b", roughness: 0.9, metalness: 0.1 };
@@ -13,7 +14,7 @@ const WALL = { color: "#08070b", roughness: 0.9, metalness: 0.1 };
 /** The final room: one stone suspended in a shaft of light beside a monolith. */
 export function NamesChamber({ fancy, reduced, sectionRef }: { fancy: boolean; reduced: boolean; sectionRef: RefObject<number> }) {
   const stone = useRef<THREE.Group>(null);
-  const shaft = useRef<THREE.SpotLight>(null);
+  const shaft = useRef<LightProxy>(null);
   const beam = useRef<THREE.ShaderMaterial>(null);
   const beamUniforms = useMemo(() => ({ uOpacity: { value: 0.08 } }), []);
 
@@ -23,7 +24,7 @@ export function NamesChamber({ fancy, reduced, sectionRef }: { fancy: boolean; r
       s.rotation.y += delta * (reduced ? 0.03 : 0.2);
       s.position.y = 1.55 + Math.sin(performance.now() * 0.0006) * (reduced ? 0 : 0.04);
     }
-    const near = 1 - Math.min(1, Math.abs((sectionRef.current ?? 0) - 6) / 1.2);
+    const near = 1 - Math.min(1, Math.abs((sectionRef.current ?? 0) - 7) / 1.2);
     if (shaft.current) shaft.current.intensity = 8 + near * 60;
     if (beam.current) beam.current.uniforms.uOpacity.value = 0.04 + near * 0.1;
   });
@@ -70,10 +71,8 @@ export function NamesChamber({ fancy, reduced, sectionRef }: { fancy: boolean; r
       </mesh>
       <Glow position={[0.75, 0.01, 0.3]} size={1.6} opacity={0.55} color="#a47bff" />
 
-      <spotLight ref={shaft} position={[0.75, 4.4, 0.3]} angle={0.24} penumbra={0.7} intensity={40} distance={8} color="#f7f4ff" castShadow>
-        <object3D attach="target" position={[0.75, 0, 0.3]} />
-      </spotLight>
-      <pointLight position={[-1.4, 1.2, 1.1]} intensity={3} distance={5} color="#3d4dff" />
+      <RigSpot ref={shaft} room="chamber" position={[0.75, 4.4, 0.3]} target={[0.75, 0, 0.3]} angle={0.24} penumbra={0.7} intensity={40} distance={8} color="#f7f4ff" castShadow />
+      <RigPoint room="chamber" position={[-1.4, 1.2, 1.1]} intensity={3} distance={5} color="#3d4dff" />
     </group>
   );
 }

@@ -15,7 +15,7 @@ const Stage = dynamic(() => import("@/components/stage"), { ssr: false });
 
 type Phase = "boot" | "cta" | "leaving" | "in";
 
-const CHAPTER_NAMES = ["Overture", "Stillness", "Instinct", "Presence", "Constant", "Nocturne", "Legacy"];
+const CHAPTER_NAMES = ["Overture", "Stillness", "Instinct", "Presence", "Constant", "Nocturne", "Heritage", "Legacy"];
 
 export function Experience() {
   const [phase, setPhase] = useState<Phase>("boot");

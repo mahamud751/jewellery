@@ -1,4 +1,4 @@
-export const SECTION_COUNT = 7;
+export const SECTION_COUNT = 8;
 
 export type SectionCopy = {
   id: string;
@@ -49,6 +49,13 @@ export const CHAPTERS: SectionCopy[] = [
     href: "/collections/nocturne",
   },
   {
+    id: "bengal",
+    title: "Adorned, \nThe Bengal Way.",
+    desc: "Tikli at the parting, jhumko at the ear, shakha and pola at the wrist. The bridal gold of Bengal, worn as it has been for generations.",
+    highlight: "Heritage is the rarest stone.",
+    place: "l",
+  },
+  {
     id: "names",
     title: "Some Names \nDo Not Fade.",
     desc: "GRAIR is not a collection. It is a constant.",
@@ -57,6 +64,18 @@ export const CHAPTERS: SectionCopy[] = [
     href: "/collections",
   },
 ];
+
+/** The chapters each room is seen in. The light rig keeps only the two rooms nearest the camera lit. */
+export const ROOMS = {
+  atelier: [0, 2],
+  gallery: [3, 3],
+  constant: [4, 4],
+  nocturne: [5, 5],
+  bengal: [6, 6],
+  chamber: [7, 7],
+} as const;
+
+export type RoomId = keyof typeof ROOMS;
 
 type Vec3 = readonly [number, number, number];
 type Shot = { position: Vec3; target: Vec3 };
@@ -87,9 +106,14 @@ const constantShot = roomShot(CONSTANT_ORIGIN, CONSTANT_YAW, 6.4, 2.1, 0.75, 1.2
 export const NOCTURNE_YAW = Math.atan2(constantShot.position[0] - NOCTURNE_ORIGIN[0], constantShot.position[2] - NOCTURNE_ORIGIN[2]);
 const nocturneShot = roomShot(NOCTURNE_ORIGIN, NOCTURNE_YAW, 7.6, 1.9, 1.75, -0.15);
 
+/** The Bengal room faces the vault's camera; the flight out to the names chamber passes in front of it. */
+export const BENGAL_ORIGIN = [11, 0, 4.5] as const;
+export const BENGAL_YAW = Math.atan2(nocturneShot.position[0] - BENGAL_ORIGIN[0], nocturneShot.position[2] - BENGAL_ORIGIN[2]);
+const bengalShot = roomShot(BENGAL_ORIGIN, BENGAL_YAW, 6.6, 1.65, 1.22, 1.35);
+
 /**
  * Camera shots in world space. The camera looks along −z at `target`.
- * Shots 3 onward are separate rooms: gallery, turntable, vault, names chamber.
+ * Shots 3 onward are separate rooms: gallery, turntable, vault, Bengal, names chamber.
  * Targets sit off the jewel so the stone lands left or right of center and the type keeps its dark field.
  */
 export const SHOTS: Shot[] = [
@@ -99,5 +123,6 @@ export const SHOTS: Shot[] = [
   { position: [16.57, 1.58, -10.95], target: [13.69, 1.08, -8.48] },
   constantShot,
   nocturneShot,
+  bengalShot,
   { position: [11.56, 2.06, 13.15], target: [7.46, 1.48, 14.64] },
 ];

@@ -5,12 +5,14 @@ import { useFrame } from "@react-three/fiber";
 import { useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { Glow } from "@/components/jewels";
+import { RigPoint, RigSpot, type LightProxy } from "@/components/room-rig";
 import { Jewel } from "@/components/models";
 import { METALS, type Model } from "@/lib/catalog";
 import { CONSTANT_ORIGIN, CONSTANT_YAW, NOCTURNE_ORIGIN, NOCTURNE_YAW } from "@/lib/sections";
 
 const WALL = { color: "#0b0a0f", roughness: 0.88, metalness: 0.1 };
 const PLATINUM = METALS.platinum.color;
+const HALO = new THREE.Color("#cfe0ff");
 
 /** 0 far away, 1 when the camera has arrived at `index`. */
 const nearness = (section: number, index: number, span = 1.2) => 1 - Math.min(1, Math.abs(section - index) / span);
@@ -18,14 +20,14 @@ const nearness = (section: number, index: number, span = 1.2) => 1 - Math.min(1,
 /** Chapter V: the Constant pieces turning on a dais under a halo of light. */
 export function ConstantStage({ sectionRef, reduced }: { sectionRef: RefObject<number>; reduced: boolean }) {
   const table = useRef<THREE.Group>(null);
-  const key = useRef<THREE.SpotLight>(null);
+  const key = useRef<LightProxy>(null);
   const halo = useRef<THREE.MeshBasicMaterial>(null);
 
   useFrame((_, delta) => {
     if (table.current) table.current.rotation.y += delta * (reduced ? 0.02 : 0.16);
     const near = nearness(sectionRef.current ?? 0, 4);
     if (key.current) key.current.intensity = 10 + near * 50;
-    if (halo.current) halo.current.color.setScalar(0.35 + near * 0.65).multiply(new THREE.Color("#cfe0ff"));
+    if (halo.current) halo.current.color.setScalar(0.35 + near * 0.65).multiply(HALO);
   });
 
   return (
@@ -73,10 +75,8 @@ export function ConstantStage({ sectionRef, reduced }: { sectionRef: RefObject<n
         <Jewel model="hoops" metal={METALS["yellow-gold"].color} stone="ice" position={[0.72, 0.26, -0.45]} rotation={[0, -0.4, 0]} scale={0.8} />
       </group>
 
-      <spotLight ref={key} position={[0.5, 4.6, 1.8]} angle={0.42} penumbra={0.9} intensity={40} distance={10} color="#f4f6ff" castShadow>
-        <object3D attach="target" position={[0, 0.3, 0]} />
-      </spotLight>
-      <pointLight position={[-2, 1.2, 1.5]} intensity={4} distance={6} color="#6f8cff" />
+      <RigSpot ref={key} room="constant" position={[0.5, 4.6, 1.8]} target={[0, 0.3, 0]} angle={0.42} penumbra={0.9} intensity={40} distance={10} color="#f4f6ff" castShadow />
+      <RigPoint room="constant" position={[-2, 1.2, 1.5]} intensity={4} distance={6} color="#6f8cff" />
     </group>
   );
 }
@@ -167,10 +167,8 @@ export function NocturneVault({ reduced }: { reduced: boolean }) {
       </group>
       <Glow position={[-1.2, 0.01, -1.2]} size={5} opacity={0.2} color="#7a4dff" />
 
-      <spotLight position={[1.5, 5, 3]} angle={0.55} penumbra={1} intensity={45} distance={12} color="#f3eeff">
-        <object3D attach="target" position={[-1.2, 1.6, -2.2]} />
-      </spotLight>
-      <pointLight position={[-1.2, 1.7, -0.5]} intensity={5} distance={4} color="#c8b0ff" />
+      <RigSpot room="nocturne" position={[1.5, 5, 3]} target={[-1.2, 1.6, -2.2]} angle={0.55} penumbra={1} intensity={45} distance={12} color="#f3eeff" />
+      <RigPoint room="nocturne" position={[-1.2, 1.7, -0.5]} intensity={5} distance={4} color="#c8b0ff" />
     </group>
   );
 }
