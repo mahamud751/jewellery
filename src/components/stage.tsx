@@ -272,11 +272,11 @@ function Scene({
       <fog attach="fog" args={["#050407", 11, 30]} />
       <LoadBridge onProgress={onProgress} />
       <Rig sectionRef={sectionRef} smoothRef={smoothRef} aboutRef={aboutRef} reduced={reduced} />
-      <Studio />
+      <Studio resolution={fancy ? 512 : 256} />
       {/* Real lights live outside the rooms: hiding one would change the light count and recompile every shader. */}
       <ambientLight intensity={0.12} />
       <EnvProvider>
-        <RoomRig sectionRef={smoothRef}>
+        <RoomRig sectionRef={smoothRef} warmUp={fancy}>
           <Room id="atelier">
             <Lights />
             <Atelier fancy={fancy} />
@@ -302,9 +302,11 @@ function Scene({
           </Room>
         </RoomRig>
       </EnvProvider>
-      <EffectComposer enableNormalPass={false} multisampling={fancy ? 4 : 2}>
-        <Bloom luminanceThreshold={1.2} luminanceSmoothing={0.15} mipmapBlur intensity={fancy ? 0.16 : 0.1} />
-      </EffectComposer>
+      {fancy ? (
+        <EffectComposer enableNormalPass={false} multisampling={2}>
+          <Bloom luminanceThreshold={1.2} luminanceSmoothing={0.15} mipmapBlur intensity={0.16} />
+        </EffectComposer>
+      ) : null}
     </>
   );
 }
@@ -324,14 +326,14 @@ export default function Stage({
   paused: boolean;
   onProgress: (value: number) => void;
 }) {
-  // Render at full retina sharpness; step down a little when the GPU can't hold the frame rate.
   const [lowRes, setLowRes] = useState(false);
+  const effectiveLowRes = !fancy || lowRes;
 
   return (
     <Canvas
       className="webgl"
-      shadows
-      dpr={lowRes ? [1, 1.4] : [1, 2]}
+      shadows={fancy}
+      dpr={effectiveLowRes ? 1 : [1, 1.5]}
       frameloop={paused ? "never" : "always"}
       // The effect composer renders into its own targets and antialiases there (multisampling).
       gl={{ antialias: false, alpha: false, powerPreference: "high-performance" }}
@@ -342,7 +344,9 @@ export default function Stage({
         gl.setClearColor("#050407");
       }}
     >
-      <PerformanceMonitor onDecline={() => setLowRes(true)} onIncline={() => setLowRes(false)} flipflops={3} onFallback={() => setLowRes(true)} />
+      {fancy ? (
+        <PerformanceMonitor onDecline={() => setLowRes(true)} flipflops={2} onFallback={() => setLowRes(true)} />
+      ) : null}
       <Scene
         sectionRef={sectionRef}
         aboutRef={aboutRef}

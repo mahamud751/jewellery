@@ -138,7 +138,15 @@ function copyPoint(light: THREE.PointLight, proxy: LightProxy | undefined) {
 }
 
 /** Culls rooms and drives the light pool. `sectionRef` is the camera's eased position along the chapters. */
-export function RoomRig({ sectionRef, children }: { sectionRef: RefObject<number>; children: ReactNode }) {
+export function RoomRig({
+  sectionRef,
+  warmUp = false,
+  children,
+}: {
+  sectionRef: RefObject<number>;
+  warmUp?: boolean;
+  children: ReactNode;
+}) {
   const byRoom = useRef(new Map<RoomId, LightProxy[]>(ROOM_IDS.map((id) => [id, []])));
   const groups = useRef(new Map<THREE.Group, RoomId>());
   const slotRoom = useRef<(RoomId | null)[]>(Array(SLOTS).fill(null));
@@ -180,7 +188,7 @@ export function RoomRig({ sectionRef, children }: { sectionRef: RefObject<number
   useFrame(({ gl, scene, camera }) => {
     // Once the stones have their studio map, compile every shader in the background with every room
     // shown for that one frame, so no room stalls on its first visit.
-    if (env && !warmed.current) {
+    if (warmUp && env && !warmed.current) {
       warmed.current = true;
       for (const group of groups.current.keys()) group.visible = true;
       void gl.compileAsync(scene, camera);

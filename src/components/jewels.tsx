@@ -277,7 +277,7 @@ export function Bust({ fancy, ...props }: { fancy: boolean } & ThreeElements["gr
 }
 
 /** Offline studio: softboxes and strips baked into a cube map the stones refract. */
-export function Studio({ neutral = false }: { neutral?: boolean }) {
+export function Studio({ neutral = false, resolution = 512 }: { neutral?: boolean; resolution?: 256 | 512 }) {
   if (neutral) {
     // Product views use a clean white studio so golds read true.
     return (
@@ -310,7 +310,7 @@ export function Studio({ neutral = false }: { neutral?: boolean }) {
   // either black or blazing white, never a mid-grey panel, which is what makes a stone
   // look brilliant rather than faded.
   return (
-    <Environment resolution={512} frames={1} environmentIntensity={1}>
+    <Environment resolution={resolution} frames={1} environmentIntensity={1}>
       <color attach="background" args={["#000000"]} />
       {/* narrow ceiling bar and a key strip over the right shoulder */}
       <Lightformer form="rect" intensity={12} position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[5, 1.2, 1]} />

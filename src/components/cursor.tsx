@@ -32,6 +32,18 @@ export function Cursor({ label }: { label: string }) {
     let frame = 0;
     let visible = false;
 
+    const tick = () => {
+      const k = reduce ? 1 : 0.16;
+      pos.x += (target.x - pos.x) * k;
+      pos.y += (target.y - pos.y) * k;
+      r.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+      if (Math.abs(target.x - pos.x) + Math.abs(target.y - pos.y) > 0.1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        frame = 0;
+      }
+    };
+
     const onMove = (event: PointerEvent) => {
       target.x = event.clientX;
       target.y = event.clientY;
@@ -43,6 +55,7 @@ export function Cursor({ label }: { label: string }) {
         r.classList.add("is-on");
       }
       d.style.transform = `translate3d(${target.x}px, ${target.y}px, 0)`;
+      if (!frame) frame = requestAnimationFrame(tick);
 
       const hit = (event.target as Element | null)?.closest("button, a, [data-cursor]");
       r.classList.toggle("is-hover", Boolean(hit));
@@ -55,15 +68,6 @@ export function Cursor({ label }: { label: string }) {
     };
     const onDown = () => r.classList.add("is-down");
     const onUp = () => r.classList.remove("is-down");
-
-    const tick = () => {
-      const k = reduce ? 1 : 0.16;
-      pos.x += (target.x - pos.x) * k;
-      pos.y += (target.y - pos.y) * k;
-      r.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
 
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("pointerleave", onLeave);

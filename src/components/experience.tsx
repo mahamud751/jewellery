@@ -27,7 +27,9 @@ export function Experience() {
   const [audioOn, setAudioOn] = useState(false);
   const [progress, setProgress] = useState(8);
   const [reduced, setReduced] = useState(false);
-  const [fancy, setFancy] = useState(true);
+  // Start conservatively. Upgrading after capability detection is much cheaper
+  // than briefly allocating retina render targets on an ordinary laptop.
+  const [fancy, setFancy] = useState(false);
   const [paused, setPaused] = useState(false);
   const [logoOn, setLogoOn] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -70,8 +72,18 @@ export function Experience() {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
     const wide = window.matchMedia("(min-width: 900px)");
     const sync = () => {
+      const navigatorWithHints = navigator as Navigator & {
+        deviceMemory?: number;
+        connection?: { saveData?: boolean };
+      };
+      const memory = navigatorWithHints.deviceMemory;
+      const cores = navigator.hardwareConcurrency || 4;
+      const constrained =
+        navigatorWithHints.connection?.saveData === true ||
+        (memory !== undefined && memory < 8) ||
+        cores < 8;
       setReduced(reduce.matches);
-      setFancy(wide.matches && !reduce.matches);
+      setFancy(wide.matches && !reduce.matches && !constrained);
     };
     sync();
     reduce.addEventListener("change", sync);
@@ -468,7 +480,9 @@ function ScrollRail({ section, onJump }: { section: number; onJump: (index: numb
       const point = path.getPointAtLength(length * (current.current / (SECTION_COUNT - 1)));
       gem.style.left = `${(point.x / 30) * 100}%`;
       gem.style.top = `${(point.y / 452) * 100}%`;
-      frame = requestAnimationFrame(tick);
+      if (Math.abs(section - current.current) > 0.001) {
+        frame = requestAnimationFrame(tick);
+      }
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);

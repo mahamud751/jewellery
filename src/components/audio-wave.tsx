@@ -4,12 +4,6 @@ import { useEffect, useRef } from "react";
 
 export function AudioWave({ active }: { active: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const activeRef = useRef(active);
-
-  useEffect(() => {
-    activeRef.current = active;
-  }, [active]);
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -28,9 +22,8 @@ export function AudioWave({ active }: { active: boolean }) {
     let frame = 0;
 
     const draw = (time: number) => {
-      const hovering = canvas.matches(":hover");
-      const targetH = activeRef.current ? 5.5 : hovering ? 1.4 : 0;
-      const targetA = activeRef.current ? -0.18 : hovering ? -0.1 : 0;
+      const targetH = active ? 5.5 : 0;
+      const targetA = active ? -0.18 : 0;
       heightNow += (targetH - heightNow) * 0.08;
       ampNow += (targetA - ampNow) * 0.08;
 
@@ -48,12 +41,13 @@ export function AudioWave({ active }: { active: boolean }) {
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
-      frame = requestAnimationFrame(draw);
+      // A muted control is static; don't keep an animation loop alive for it.
+      if (active || Math.abs(heightNow) > 0.05) frame = requestAnimationFrame(draw);
     };
 
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
-  }, []);
+  }, [active]);
 
   return <canvas ref={canvasRef} className="audio-wave" aria-hidden="true" />;
 }
